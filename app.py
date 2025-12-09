@@ -30,7 +30,7 @@ def parse_label(label):
 # -----------------------------------------------------------
 def predict_leaf(uploaded_file):
     img = image.load_img(uploaded_file, target_size=(224, 224))
-    img_arr = image.img_to_array(img) / 255.0
+    img_arr = image.img_to_array(img)
     img_arr = np.expand_dims(img_arr, axis=0)
 
     predictions = model.predict(img_arr)[0]
@@ -49,6 +49,7 @@ st.set_page_config(page_title="Leaf Classification App", layout="centered")
 
 st.title("🌿 Leaf Species & Disease Classifier")
 st.write("Upload a leaf image to identify **species** and **health condition**.")
+st.write("By Haseeb Ali (241-5D-DIP-Project) **Instructor: (Sir. Syed Karar Haider Bukhari)**.")
 
 uploaded_file = st.file_uploader("Upload Leaf Image", type=["jpg", "jpeg", "png"])
 
