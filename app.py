@@ -65,5 +65,8 @@ if uploaded_file is not None:
             species, health, confidence = predict_leaf(uploaded_file)
 
         st.success(f"🌱 **Species:** {species}")
-        st.success(f"💊 **Health Status:** {health}")
+        if(health == 'Diseased'):
+            st.danger(f"💊 **Health Status:** {health}")
+        else:
+            st.success(f"💊 **Health Status:** {health}")
         st.info(f"📊 **Confidence:** {confidence:.2f}%")
