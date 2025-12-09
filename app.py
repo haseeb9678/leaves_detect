@@ -27,14 +27,22 @@ class_names = ['Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_r
 'Tomato___healthy']
 
 
-
 # -----------------------------------------------------------
-# Helper: Extract Species & Health
+# Helper: Extract Species, Disease & Health
 # -----------------------------------------------------------
 def parse_label(label):
-    species = label.split("___")[0]
-    health = "Healthy" if "healthy" in label.lower() else "Diseased"
-    return species, health
+    parts = label.split("___")
+    species = parts[0]
+
+    # Determine Healthy or Diseased
+    if "healthy" in parts[1].lower():
+        disease = "No Disease"
+        health = "Healthy"
+    else:
+        disease = parts[1]
+        health = "Diseased"
+
+    return species, disease, health
 
 
 # -----------------------------------------------------------
@@ -51,10 +59,10 @@ def predict_leaf(uploaded_file):
     idx = np.argmax(predictions)
 
     predicted_label = class_names[idx]
-    species, health = parse_label(predicted_label)
+    species, disease, health = parse_label(predicted_label)
     confidence = predictions[idx] * 100
 
-    return species, health, confidence, img
+    return species, disease, health, confidence, img
 
 
 # -----------------------------------------------------------
@@ -73,9 +81,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.write("Upload a clear leaf image to identify **species** and its **health condition**.")
+st.write("Upload a clear leaf image to identify **species**, **disease name**, and its **health condition**.")
 
 uploaded_file = st.file_uploader("📤 Upload Leaf Image", type=["jpg", "jpeg", "png"])
+
 
 # -----------------------------------------------------------
 # Display + Predict
@@ -85,12 +94,13 @@ if uploaded_file is not None:
 
     if st.button("🔍 Predict"):
         with st.spinner("🔄 Analyzing image... Please wait..."):
-            species, health, confidence, processed_img = predict_leaf(uploaded_file)
+            species, disease, health, confidence, processed_img = predict_leaf(uploaded_file)
 
         st.subheader("🔎 Prediction Results")
         st.image(processed_img, caption="Processed Image", width=300)
 
         st.success(f"🌱 **Species:** {species}")
+        st.info(f"🦠 **Disease:** {disease}")
 
         if health == 'Diseased':
             st.error(f"💊 **Health Status:** {health}")
@@ -99,5 +109,3 @@ if uploaded_file is not None:
 
         st.info(f"📊 **Confidence Score:** {confidence:.2f}%")
         st.progress(float(confidence) / 100)
-        
-      
