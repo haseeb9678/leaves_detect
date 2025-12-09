@@ -100,7 +100,7 @@ if uploaded_file is not None:
         st.image(processed_img, caption="Processed Image", width=300)
 
         st.success(f"🌱 **Species:** {species}")
-        st.info(f"🦠 **Disease:** {disease}")
+        st.warning(f"🦠 **Disease:** {disease}")
 
         if health == 'Diseased':
             st.error(f"💊 **Health Status:** {health}")
