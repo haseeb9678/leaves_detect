@@ -48,7 +48,7 @@ def predict_leaf(uploaded_file):
 st.set_page_config(page_title="Leaf Classification App", layout="centered")
 
 st.title("🌿 Leaf Species & Disease Classifier")
-st.title("By Haseeb Ali (241-5D-DIP-Project) **Instructor: (Sir. Syed Karar Haider Bukhari)**.")
+st.write("By Haseeb Ali (241-5D-DIP-Project) **Instructor: (Sir. Syed Karar Haider Bukhari)**.")
 st.write("Upload a leaf image to identify **species** and **health condition**.")
 
 
