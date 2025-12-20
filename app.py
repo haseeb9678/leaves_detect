@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import os
 import gdown
+import requests
 
 # ===========================================================
 # PAGE CONFIG
@@ -59,6 +60,38 @@ class_names = [
     'Tomato___Tomato_mosaic_virus', 'Tomato___healthy'
 ]
 
+def get_disease_info(species, disease):
+    prompt = f"""
+    Explain the plant disease '{disease}' found in {species}.
+    Provide:
+    1. Cause
+    2. Symptoms
+    3. Prevention
+    4. Treatment
+    Use simple and clear language.
+    """
+
+    headers = {
+        "Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "openai/gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3
+    }
+
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=30
+    )
+
+    return response.json()["choices"][0]["message"]["content"]
+
+
 # ===========================================================
 # HELPERS
 # ===========================================================
@@ -108,8 +141,12 @@ def predict_disease(uploaded_file):
     label = class_names[idx]
     species, disease, health = parse_label(label)
     confidence = float(preds[idx] * 100)
+    # Top-3 predictions
+    top3_idx = np.argsort(preds)[::-1][:3]
+    top3 = [(class_names[i], float(preds[i] * 100)) for i in top3_idx]
 
-    return species, disease, health, confidence, img
+
+    return species, disease, health, confidence, img, top3
 
 # ===========================================================
 # UI
@@ -156,7 +193,7 @@ if uploaded_file is not None:
 
             # ---------- Disease Detection ----------
             with st.spinner("🦠 Detecting disease..."):
-                species, disease, health, conf, img2 = predict_disease(uploaded_file)
+                species, disease, health, conf, img2, top3 = predict_disease(uploaded_file)
 
             st.subheader("🔎 Disease Prediction Results")
             st.image(img2, width=300)
@@ -173,3 +210,17 @@ if uploaded_file is not None:
 
             progress_value = max(0.0, min(conf / 100.0, 1.0))
             st.progress(progress_value)
+            # ---------------- TOP-3 PREDICTIONS ----------------
+            st.subheader("🔝 Top-3 Disease Predictions")
+            for name, score in top3:
+                  st.write(f"• **{name}** → {score:.2f}%")
+
+            # ---------------- AI EXPLANATION ----------------
+            st.subheader("🤖 AI Disease Explanation")
+
+            with st.spinner("🔍 Generating disease explanation..."):
+                  ai_text = get_disease_info(species, disease)
+
+            st.markdown(ai_text)
+
+
