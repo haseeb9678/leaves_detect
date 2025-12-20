@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 
 # -----------------------------------------------------------
-# Load trained model
+# Load model
 # -----------------------------------------------------------
 model = tf.keras.models.load_model(
     "final_leaf_classifier.keras",
@@ -12,7 +12,7 @@ model = tf.keras.models.load_model(
 )
 
 # -----------------------------------------------------------
-# CLASS NAMES
+# CLASS NAMES (MUST MATCH TRAINING ORDER)
 # -----------------------------------------------------------
 class_names = [
     'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
@@ -32,23 +32,16 @@ class_names = [
 ]
 
 # -----------------------------------------------------------
-# Helper: Parse label
+# Helper
 # -----------------------------------------------------------
 def parse_label(label):
-    parts = label.split("___")
-    species = parts[0]
-
-    if "healthy" in parts[1].lower():
-        disease = "No Disease"
-        health = "Healthy"
-    else:
-        disease = parts[1]
-        health = "Diseased"
-
-    return species, disease, health
+    plant, status = label.split("___")
+    if "healthy" in status.lower():
+        return plant, "No Disease", "Healthy"
+    return plant, status, "Diseased"
 
 # -----------------------------------------------------------
-# Prediction Function (STRONG NON-LEAF LOGIC)
+# CORRECT PREDICTION LOGIC
 # -----------------------------------------------------------
 def predict_leaf(uploaded_file):
     img = Image.open(uploaded_file).convert("RGB")
@@ -57,84 +50,60 @@ def predict_leaf(uploaded_file):
     img_arr = np.array(img) / 255.0
     img_arr = np.expand_dims(img_arr, axis=0)
 
-    predictions = model.predict(img_arr, verbose=0)[0]
+    preds = model.predict(img_arr, verbose=0)[0]
 
-    # Top-1 and Top-2 probabilities
-    sorted_probs = np.sort(predictions)[::-1]
-    top1 = sorted_probs[0]
-    top2 = sorted_probs[1]
+    # ----- statistics -----
+    top_idx = int(np.argmax(preds))
+    top_conf = float(preds[top_idx])
+    second_conf = float(np.sort(preds)[-2])
+    gap = top_conf - second_conf
 
-    confidence = float(top1 * 100)
-    confidence_gap = float((top1 - top2) * 100)
+    entropy = -np.sum(preds * np.log(preds + 1e-9))
 
-    # 🚫 NON-LEAF REJECTION (MAIN FIX)
-    if confidence < 70 or confidence_gap < 20:
-        return None, None, None, confidence, img
+    # -------------------------------------------------------
+    # 🚫 HARD REJECTION CONDITIONS (THIS IS THE FIX)
+    # -------------------------------------------------------
+    if (
+        top_conf < 0.75 or          # low confidence
+        gap < 0.25 or               # class confusion
+        entropy > 2.5 or            # uncertain prediction
+        class_names[top_idx] == "Tomato___Late_blight" and entropy > 1.5
+    ):
+        return None, None, None, top_conf * 100, img
 
-    idx = np.argmax(predictions)
-    predicted_label = class_names[idx]
-    species, disease, health = parse_label(predicted_label)
+    label = class_names[top_idx]
+    species, disease, health = parse_label(label)
 
-    return species, disease, health, confidence, img
+    return species, disease, health, top_conf * 100, img
 
 # -----------------------------------------------------------
 # Streamlit UI
 # -----------------------------------------------------------
-st.set_page_config(
-    page_title="Leaf Disease Detection System",
-    layout="centered"
-)
+st.set_page_config(page_title="Leaf Disease Detection", layout="centered")
 
-st.markdown(
-    """
-    <h1 style='text-align:center; color:#2e8b57;'>🌿 Leaf Disease Detection System</h1>
-    <p style='text-align:center; font-size:16px;'>
-        <b>By Haseeb Ali (241-5D-DIP Project)</b><br>
-        Instructor: <b>Sir Syed Karar Haider Bukhari</b>
-    </p>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+<h1 style='text-align:center;color:#2e8b57;'>🌿 Leaf Disease Detection System</h1>
+<p style='text-align:center;'>
+<b>By Haseeb Ali</b><br>
+Instructor: <b>Sir Syed Karar Haider Bukhari</b>
+</p>
+""", unsafe_allow_html=True)
 
-st.write(
-    "Upload a **clear leaf image** to identify plant species, disease name, and health condition."
-)
+uploaded_file = st.file_uploader("📤 Upload Leaf Image", type=["jpg", "jpeg", "png"])
 
-uploaded_file = st.file_uploader(
-    "📤 Upload Leaf Image",
-    type=["jpg", "jpeg", "png"]
-)
-
-# -----------------------------------------------------------
-# Prediction
-# -----------------------------------------------------------
-if uploaded_file is not None:
-    st.image(uploaded_file, caption="📸 Uploaded Image", width=400)
+if uploaded_file:
+    st.image(uploaded_file, width=400)
 
     if st.button("🔍 Predict"):
-        with st.spinner("🔄 Analyzing image..."):
-            species, disease, health, confidence, processed_img = predict_leaf(uploaded_file)
+        species, disease, health, confidence, img = predict_leaf(uploaded_file)
 
-        # 🚫 Non-leaf case
         if species is None:
-            st.error("🚫 This image does NOT appear to be a leaf.")
-            st.info(f"📊 Model Confidence: {confidence:.2f}%")
-            st.warning("Please upload a valid leaf image.")
-
-        # ✅ Leaf case
+            st.error("🚫 Prediction rejected: Image is NOT a valid leaf or model is unreliable.")
+            st.info(f"Confidence: {confidence:.2f}%")
+            st.warning("Reason: Model collapsed / out-of-distribution input.")
         else:
-            st.subheader("🔎 Prediction Results")
-            st.image(processed_img, caption="Processed Image", width=300)
-
-            st.success(f"🌱 **Species:** {species}")
-            st.warning(f"🦠 **Disease:** {disease}")
-
-            if health == "Diseased":
-                st.error(f"💊 **Health Status:** {health}")
-            else:
-                st.success(f"💊 **Health Status:** {health}")
-
-            st.info(f"📊 **Confidence Score:** {confidence:.2f}%")
-
-            progress_value = min(max(confidence / 100, 0.0), 1.0)
-            st.progress(progress_value)
+            st.success(f"🌱 Species: {species}")
+            st.warning(f"🦠 Disease: {disease}")
+            st.info(f"💊 Health: {health}")
+            st.info(f"📊 Confidence: {confidence:.2f}%")
+            st.progress(min(max(confidence / 100, 0.0), 1.0))
