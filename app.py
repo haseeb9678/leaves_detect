@@ -50,6 +50,36 @@ class_names = [
     'Tomato___Tomato_mosaic_virus', 'Tomato___healthy'
 ]
 
+def get_disease_info(species, disease):
+    prompt = f"""
+    Explain the plant disease '{disease}' found in {species}.
+    Provide:
+    1. Cause
+    2. Symptoms
+    3. Prevention
+    4. Treatment
+    Use simple language for farmers/students.
+    """
+
+    headers = {
+        "Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "openai/gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3
+    }
+
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers,
+        json=payload
+    )
+
+    return response.json()["choices"][0]["message"]["content"]
+
 # -----------------------------------------------------------
 # Helper: Parse Disease Label
 # -----------------------------------------------------------
@@ -167,34 +197,6 @@ if uploaded_file is not None:
 
 
 
-def get_disease_info(species, disease):
-    prompt = f"""
-    Explain the plant disease '{disease}' found in {species}.
-    Provide:
-    1. Cause
-    2. Symptoms
-    3. Prevention
-    4. Treatment
-    Use simple language for farmers/students.
-    """
 
-    headers = {
-        "Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "openai/gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3
-    }
-
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers=headers,
-        json=payload
-    )
-
-    return response.json()["choices"][0]["message"]["content"]
 
 
