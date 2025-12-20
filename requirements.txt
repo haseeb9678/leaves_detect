@@ -4,3 +4,4 @@ numpy
 Pillow
 keras
 gdown
+requests
