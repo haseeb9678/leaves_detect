@@ -155,5 +155,8 @@ if uploaded_file is not None:
                 st.success(f"💊 **Health Status:** {health}")
 
             st.info(f"📊 **Disease Confidence:** {conf:.2f}%")
-            st.progress(min(max(conf / 100, 0.0), 1.0))
+            progress_value = float(conf) / 100.0
+            progress_value = max(0.0, min(progress_value, 1.0))
+            st.progress(progress_value)
+
 
