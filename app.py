@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import os
 import gdown
+import requests
 
 # -----------------------------------------------------------
 # Download Leaf / Non-Leaf Model from Google Drive
