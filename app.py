@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ===========================================================
-# MODEL DOWNLOAD (Leaf / Non-Leaf)
+# DOWNLOAD LEAF / NON-LEAF MODEL
 # ===========================================================
 os.makedirs("models", exist_ok=True)
 
@@ -23,10 +23,10 @@ LEAF_MODEL_PATH = "models/leaf_nonleaf_classifier.keras"
 
 if not os.path.exists(LEAF_MODEL_PATH):
     with st.spinner("⬇️ Downloading Leaf / Non-Leaf model..."):
-        gdown.download(LEAF_MODEL_URL, LEAF_MODEL_PATH, quiet=False)
+        gdown.download(LEAF_MODEL_URL, LEAF_MODEL_PATH, quiet=False, fuzzy=True)
 
 # ===========================================================
-# LOAD MODELS (CACHED — MOST IMPORTANT FIX)
+# LOAD MODELS (CACHED – VERY IMPORTANT)
 # ===========================================================
 @st.cache_resource
 def load_models():
@@ -40,7 +40,7 @@ def load_models():
 leaf_detector, disease_model = load_models()
 
 # ===========================================================
-# CLASS NAMES (EXACT ORDER USED IN TRAINING)
+# CLASS NAMES (EXACT TRAINING ORDER)
 # ===========================================================
 class_names = [
     'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
@@ -68,10 +68,19 @@ def parse_label(label):
         return plant, "No Disease", "Healthy"
     return plant, status, "Diseased"
 
-def preprocess_image(uploaded_file):
+# ---------------- LEAF MODEL PREPROCESS (NORMALIZED) ----------------
+def preprocess_leaf_model(uploaded_file):
     img = Image.open(uploaded_file).convert("RGB")
     img = img.resize((224, 224))
-    arr = np.array(img)
+    arr = np.array(img) / 255.0     # ✅ normalized
+    arr = np.expand_dims(arr, axis=0)
+    return img, arr
+
+# ---------------- DISEASE MODEL PREPROCESS (RAW PIXELS) -------------
+def preprocess_disease_model(uploaded_file):
+    img = Image.open(uploaded_file).convert("RGB")
+    img = img.resize((224, 224))
+    arr = np.array(img)             # ❗ NO normalization
     arr = np.expand_dims(arr, axis=0)
     return img, arr
 
@@ -79,7 +88,7 @@ def preprocess_image(uploaded_file):
 # STEP 1 — LEAF / NON-LEAF
 # ===========================================================
 def detect_leaf(uploaded_file):
-    img, arr = preprocess_image(uploaded_file)
+    img, arr = preprocess_leaf_model(uploaded_file)
     prob = float(leaf_detector.predict(arr, verbose=0)[0][0])
 
     if prob < 0.5:
@@ -91,7 +100,7 @@ def detect_leaf(uploaded_file):
 # STEP 2 — DISEASE DETECTION
 # ===========================================================
 def predict_disease(uploaded_file):
-    img, arr = preprocess_image(uploaded_file)
+    img, arr = preprocess_disease_model(uploaded_file)
 
     preds = disease_model.predict(arr, verbose=0)[0]
     idx = int(np.argmax(preds))
@@ -135,7 +144,7 @@ if uploaded_file is not None:
     if st.button("🔍 Predict"):
         # ---------- Leaf Detection ----------
         with st.spinner("🌿 Checking if image is a leaf..."):
-            is_leaf, leaf_conf, img = detect_leaf(uploaded_file)
+            is_leaf, leaf_conf, _ = detect_leaf(uploaded_file)
 
         if not is_leaf:
             st.error("🚫 This image is NOT a leaf.")
@@ -162,5 +171,5 @@ if uploaded_file is not None:
 
             st.info(f"📊 **Disease Confidence:** {conf:.2f}%")
 
-            progress_value = max(0.0, min(float(conf) / 100.0, 1.0))
+            progress_value = max(0.0, min(conf / 100.0, 1.0))
             st.progress(progress_value)
