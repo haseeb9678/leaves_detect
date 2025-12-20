@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 import os
 import gdown
-import requests
 
 # -----------------------------------------------------------
 # Download Leaf / Non-Leaf Model from Google Drive
@@ -50,36 +49,6 @@ class_names = [
     'Tomato___Target_Spot', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus',
     'Tomato___Tomato_mosaic_virus', 'Tomato___healthy'
 ]
-
-def get_disease_info(species, disease):
-    prompt = f"""
-    Explain the plant disease '{disease}' found in {species}.
-    Provide:
-    1. Cause
-    2. Symptoms
-    3. Prevention
-    4. Treatment
-    Use simple language for farmers/students.
-    """
-
-    headers = {
-        "Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "openai/gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3
-    }
-
-    response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers=headers,
-        json=payload
-    )
-
-    return response.json()["choices"][0]["message"]["content"]
 
 # -----------------------------------------------------------
 # Helper: Parse Disease Label
@@ -186,18 +155,4 @@ if uploaded_file is not None:
                 st.success(f"💊 **Health Status:** {health}")
 
             st.info(f"📊 **Disease Confidence:** {conf:.2f}%")
-            progress_value = float(conf) / 100.0
-            progress_value = max(0.0, min(progress_value, 1.0))
-            st.progress(progress_value)
-            st.subheader("🤖 AI Disease Explanation")
-
-            #with st.spinner("🔍 AI is generating disease details..."):
-               #ai_info = get_disease_info(species, disease)
-
-            #st.markdown(ai_info)
-
-
-
-
-
-
+            st.progress(min(max(conf / 100, 0.0), 1.0))
