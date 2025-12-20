@@ -71,7 +71,7 @@ def parse_label(label):
 def preprocess_image(uploaded_file):
     img = Image.open(uploaded_file).convert("RGB")
     img = img.resize((224, 224))
-    arr = np.array(img) / 255.0
+    arr = np.array(img)
     arr = np.expand_dims(arr, axis=0)
     return img, arr
 
