@@ -191,10 +191,10 @@ if uploaded_file is not None:
             st.progress(progress_value)
             st.subheader("🤖 AI Disease Explanation")
 
-            with st.spinner("🔍 AI is generating disease details..."):
-               ai_info = get_disease_info(species, disease)
+            #with st.spinner("🔍 AI is generating disease details..."):
+               #ai_info = get_disease_info(species, disease)
 
-            st.markdown(ai_info)
+            #st.markdown(ai_info)
 
 
 
