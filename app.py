@@ -48,24 +48,30 @@ def parse_label(label):
     return species, disease, health
 
 # -----------------------------------------------------------
-# Prediction Function (SAFE VERSION)
+# Prediction Function (STRONG NON-LEAF LOGIC)
 # -----------------------------------------------------------
 def predict_leaf(uploaded_file):
     img = Image.open(uploaded_file).convert("RGB")
     img = img.resize((224, 224))
 
-    img_arr = np.array(img) / 255.0        # ✅ normalize
+    img_arr = np.array(img) / 255.0
     img_arr = np.expand_dims(img_arr, axis=0)
 
     predictions = model.predict(img_arr, verbose=0)[0]
 
-    idx = np.argmax(predictions)
-    confidence = float(predictions[idx] * 100)
+    # Top-1 and Top-2 probabilities
+    sorted_probs = np.sort(predictions)[::-1]
+    top1 = sorted_probs[0]
+    top2 = sorted_probs[1]
 
-    # 🚫 Reject Non-Leaf Images
-    if confidence < 70:
+    confidence = float(top1 * 100)
+    confidence_gap = float((top1 - top2) * 100)
+
+    # 🚫 NON-LEAF REJECTION (MAIN FIX)
+    if confidence < 70 or confidence_gap < 20:
         return None, None, None, confidence, img
 
+    idx = np.argmax(predictions)
     predicted_label = class_names[idx]
     species, disease, health = parse_label(predicted_label)
 
@@ -130,6 +136,5 @@ if uploaded_file is not None:
 
             st.info(f"📊 **Confidence Score:** {confidence:.2f}%")
 
-            # ✅ SAFE progress bar
             progress_value = min(max(confidence / 100, 0.0), 1.0)
             st.progress(progress_value)
