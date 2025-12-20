@@ -9,7 +9,7 @@ import gdown
 # PAGE CONFIG
 # ===========================================================
 st.set_page_config(
-    page_title="Leaf Disease Detection System",
+    page_title="Leaf Disease Detection System CNN",
     layout="centered"
 )
 
