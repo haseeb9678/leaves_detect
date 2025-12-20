@@ -48,22 +48,22 @@ def parse_label(label):
     return species, disease, health
 
 # -----------------------------------------------------------
-# Prediction Function (WITH CONFIDENCE THRESHOLD)
+# Prediction Function (SAFE VERSION)
 # -----------------------------------------------------------
 def predict_leaf(uploaded_file):
     img = Image.open(uploaded_file).convert("RGB")
     img = img.resize((224, 224))
 
-    img_arr = np.array(img) / 255.0   # ✅ normalization
+    img_arr = np.array(img) / 255.0        # ✅ normalize
     img_arr = np.expand_dims(img_arr, axis=0)
 
-    predictions = model.predict(img_arr)[0]
+    predictions = model.predict(img_arr, verbose=0)[0]
 
     idx = np.argmax(predictions)
-    confidence = predictions[idx] * 100
+    confidence = float(predictions[idx] * 100)
 
     # 🚫 Reject Non-Leaf Images
-    if confidence < 70:   # threshold
+    if confidence < 70:
         return None, None, None, confidence, img
 
     predicted_label = class_names[idx]
@@ -75,7 +75,7 @@ def predict_leaf(uploaded_file):
 # Streamlit UI
 # -----------------------------------------------------------
 st.set_page_config(
-    page_title="Leaf Disease Classifier",
+    page_title="Leaf Disease Detection System",
     layout="centered"
 )
 
@@ -109,13 +109,13 @@ if uploaded_file is not None:
         with st.spinner("🔄 Analyzing image..."):
             species, disease, health, confidence, processed_img = predict_leaf(uploaded_file)
 
-        # 🚫 Non-Leaf Case
+        # 🚫 Non-leaf case
         if species is None:
             st.error("🚫 This image does NOT appear to be a leaf.")
             st.info(f"📊 Model Confidence: {confidence:.2f}%")
             st.warning("Please upload a valid leaf image.")
 
-        # ✅ Leaf Case
+        # ✅ Leaf case
         else:
             st.subheader("🔎 Prediction Results")
             st.image(processed_img, caption="Processed Image", width=300)
@@ -129,4 +129,7 @@ if uploaded_file is not None:
                 st.success(f"💊 **Health Status:** {health}")
 
             st.info(f"📊 **Confidence Score:** {confidence:.2f}%")
-            st.progress(confidence / 100)
+
+            # ✅ SAFE progress bar
+            progress_value = min(max(confidence / 100, 0.0), 1.0)
+            st.progress(progress_value)
